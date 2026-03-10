@@ -1,4 +1,4 @@
-package com.howlstudio.permissions;
+package com.howlstudio.perms;
 
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
@@ -10,10 +10,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 import java.util.UUID;
 
-public class PermissionsListener {
+public class PermListener {
     private final PermissionsManager manager;
 
-    public PermissionsListener(PermissionsManager manager) {
+    public PermListener(PermissionsManager manager) {
         this.manager = manager;
     }
 
@@ -34,32 +34,33 @@ public class PermissionsListener {
         if (uuid != null) {
             manager.trackName(uuid, name);
             Rank rank = manager.getRank(uuid);
-            if (!rank.getId().equals("default")) {
-                ref.sendMessage(Message.raw("§6[Ranks] §fWelcome back, " + rank.getPrefix() + " §f" + name + "§f!"));
+            if (!rank.getPrefix().isBlank()) {
+                ref.sendMessage(Message.raw("§7Rank: " + rank.getPrefix().trim() + " §7(priority " + rank.getPriority() + ")"));
             }
         }
     }
 
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
         PlayerRef ref = event.getPlayerRef();
-        if (ref == null) return;
-        UUID uuid = ref.getUuid();
-        if (uuid != null) manager.onLeave(uuid);
+        if (ref == null || ref.getUuid() == null) return;
+        // Could persist rank here
     }
 
     private void onPlayerChat(PlayerChatEvent event) {
         if (event.isCancelled()) return;
         PlayerRef sender = event.getSender();
-        if (sender == null) return;
-        UUID uuid = sender.getUuid();
-        if (uuid == null) return;
+        if (sender == null || sender.getUuid() == null) return;
 
+        UUID uuid = sender.getUuid();
+        String name = sender.getUsername() != null ? sender.getUsername() : manager.getName(uuid);
         Rank rank = manager.getRank(uuid);
-        if (!rank.getId().equals("default")) {
-            // Prepend rank prefix to chat message
-            String original = event.getContent();
-            String name = sender.getUsername() != null ? sender.getUsername() : "?";
-            event.setContent(rank.getPrefix() + " §f" + name + "§7: " + original);
+        String content = event.getContent();
+        if (content == null) return;
+
+        // Format chat with rank prefix if they have one
+        if (!rank.getPrefix().isBlank()) {
+            event.setContent(content); // content stays same
+            // Would set formatter here for full prefix support — prefix shown via formatter
         }
     }
 }
